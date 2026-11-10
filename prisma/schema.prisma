@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PROCESSING
+  FULFILLED
+  CANCELLED
+  REFUNDED
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Product {
+  id              String      @id @default(cuid())
+  sku             String      @unique
+  slug            String      @unique
+  name            String
+  description     String      @db.Text
+  specifications  Json
+  priceNgn        Decimal?    @db.Decimal(12, 2)
+  stockQuantity   Int         @default(0)
+  imageUrls       String[]
+  isActive        Boolean     @default(true)
+  categoryId      String
+  category        Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  orderItems      OrderItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([categoryId, isActive])
+  @@index([name])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+
+  @@index([email])
+  @@index([phone])
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  orderNumber       String      @unique
+  customerId        String
+  customer          Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  status            OrderStatus @default(PENDING)
+  totalNgn          Decimal     @db.Decimal(12, 2)
+  currency          String      @default("NGN")
+  paystackReference String?     @unique
+  deliveryAddress   String      @db.Text
+  deliveryState     String
+  items             OrderItem[]
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([customerId, createdAt])
+  @@index([status, createdAt])
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productName String
+  sku         String
+  unitPrice   Decimal  @db.Decimal(12, 2)
+  quantity    Int
+  createdAt   DateTime @default(now())
+
+  @@index([orderId])
+}
+
+model CalculatorLead {
+  id          String   @id @default(cuid())
+  submissionId String  @unique
+  firstName   String
+  lastName    String
+  email       String
+  phone       String
+  state       String
+  address     String?  @db.Text
+  goal        String
+  gridProfile String
+  budget      String
+  timeline    String
+  notes       String?  @db.Text
+  report      Json
+  createdAt   DateTime @default(now())
+
+  @@index([email, createdAt])
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+}
+
+model PaymentEvent {
+  id          String   @id @default(cuid())
+  eventId     String   @unique
+  reference   String
+  eventType   String
+  payload     Json
+  processedAt DateTime @default(now())
+
+  @@index([reference])
+}
